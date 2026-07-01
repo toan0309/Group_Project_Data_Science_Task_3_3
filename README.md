@@ -62,7 +62,7 @@ Group_Project_Data_Science_Task_3_3/
 Đồ án sử dụng phương pháp trích xuất đặc trưng **HOG** kết hợp với bộ phân lớp **SVM**. 
 
 ### 1. HOG (Histogram of Oriented Gradients) - Trích xuất đặc trưng hình học
-Máy tính nhận dạng hình ảnh dưới dạng ma trận điểm ảnh. Để mô hình nhận diện được điểm khác biệt giữa các tờ tiền, chúng ta sử dụng thuật toán HOG.
+Máy tính nhận dạng hình ảnh dưới dạng ma trận điểm ảnh. Để nhận diện được các điểm khác biệt cốt lõi giữa các tờ tiền, thuật toán HOG được áp dụng.
 
 Có thể hình dung HOG như một công cụ chuyên ghi nhận **đường viền, góc cạnh, và hoa văn** của tờ tiền:
 - Thuật toán chia hình ảnh ra thành nhiều ô vuông nhỏ.
@@ -80,18 +80,35 @@ Nhiệm vụ của **SVM** là tìm ra một **đường ranh giới** tối ưu
 
 ---
 
-## 📖 Giải thích luồng thực thi của Mã nguồn
+## 📖 Giải thích chi tiết luồng thực thi của Mã nguồn
 
-Mã nguồn trong `Main_CurrencyClassification.ipynb` được tổ chức thành 6 bước logic chính:
+Mã nguồn trong tệp `Main_CurrencyClassification.ipynb` được tổ chức thành 6 khối xử lý logic chính:
 
-*   **Ô 1: Khởi tạo.** Import các thư viện cần thiết và thiết lập các biến cấu hình cơ bản (tên lớp, kích thước ảnh chuẩn).
-*   **Ô 2: Xử lý ảnh và trích xuất HOG.** 
-    *   Chương trình duyệt qua các thư mục con trong `images/` để đọc toàn bộ dữ liệu.
-    *   Chuẩn hóa tất cả các ảnh về kích thước đồng nhất (96x96 pixel).
-    *   Áp dụng thuật toán HOG để chuyển đổi mỗi bức ảnh thành một vector đặc trưng.
-*   **Ô 3: Trực quan hóa đặc trưng.** Hiển thị hình ảnh gốc song song với hình ảnh hiển thị hướng gradient của HOG để đánh giá tính hiệu quả của việc trích xuất.
-*   **Ô 4: Huấn luyện mô hình SVM.**
-    *   Tập dữ liệu được chia làm 2 phần: 80% dùng để huấn luyện (train) và 20% dùng để kiểm thử (test).
-    *   Sử dụng hàm `svm.fit()` để mô hình học cách phân loại trên tập huấn luyện.
-*   **Ô 5: Đánh giá bằng Ma trận nhầm lẫn (Confusion Matrix).** Sử dụng kết quả trên tập kiểm thử để vẽ ma trận, nhằm đánh giá chi tiết tỷ lệ dự đoán đúng/sai cho từng cặp nhãn.
-*   **Ô 6: Dự đoán thực tế.** Trực quan hóa kết quả phân loại trên tập dữ liệu gốc, hiển thị xác suất dự đoán (%) của mô hình đối với mỗi hình ảnh.
+### Khối 1 (Ô 1): Khai báo và Thiết lập ban đầu
+- **Nhập thư viện:** Nạp các module cần thiết từ thư viện `scikit-learn` (cho mô hình SVM, chuẩn hóa dữ liệu, chia tập huấn luyện) và `scikit-image` (cho thuật toán HOG, xử lý ảnh).
+- **Cấu hình tham số:** Định nghĩa danh sách các nhãn phân loại (`CLASS_NAMES` bao gồm 5 quốc gia) và thiết lập kích thước chuẩn (`IMG_SIZE = 96x96`) để đảm bảo tính đồng nhất cho toàn bộ hình ảnh đầu vào.
+
+### Khối 2 (Ô 2): Tiền xử lý dữ liệu và Trích xuất HOG
+- **Tiền xử lý:** Duyệt qua các thư mục chứa hình ảnh đầu vào. Mỗi hình ảnh khi được đọc sẽ trải qua các bước: chuyển đổi kênh màu (đảm bảo ảnh RGB hoặc ảnh xám), chuẩn hóa giá trị pixel về dải [0, 1] và thu phóng (resize) ép buộc về đúng kích thước 96x96.
+- **Trích xuất đặc trưng:** Hình ảnh sau khi chuẩn hóa được đưa qua hàm phân tích của HOG. Hàm này trả về một vector các giá trị số nguyên đại diện cho thông tin hình học, cạnh và đường nét của tờ tiền, hoàn toàn độc lập với màu sắc. Toàn bộ các vector này được lưu trữ thành tập dữ liệu `X_raw`, và nhãn tương ứng được lưu ở `y_raw`.
+
+### Khối 3 (Ô 3): Trực quan hóa kết quả trích xuất đặc trưng
+- Mục đích của khối này là kiểm chứng mức độ hiệu quả của thuật toán HOG. Bằng cách vẽ trực tiếp hình ảnh gốc đặt cạnh một bản đồ hiển thị hướng gradient của HOG, người nghiên cứu có thể quan sát trực quan những đặc điểm nào của tờ tiền (chữ số, đường gân, quốc huy) đã được thuật toán nhận diện và thu giữ lại.
+
+### Khối 4 (Ô 4): Chuẩn hóa và Huấn luyện mô hình phân lớp SVM
+- **Chuẩn hóa thang đo (Standardization):** Do các giá trị trong vector HOG có thể dao động trong những biên độ khác nhau, phương pháp `StandardScaler` được áp dụng để căn chỉnh lại tất cả các giá trị về cùng một thang đo. Bước này giúp hạn chế tình trạng sai số tỷ lệ và đảm bảo mô hình SVM hội tụ nhanh, chính xác hơn.
+- **Chia tập dữ liệu:** Sử dụng kỹ thuật `train_test_split` để phân tách tập dữ liệu thành 2 phần: 80% dành cho việc huấn luyện mô hình và 20% được tách biệt hoàn toàn để sử dụng cho mục đích kiểm thử khách quan sau này. Tham số `stratify` được khai báo nhằm duy trì tỷ lệ các loại tiền tệ phân bố đồng đều giữa 2 tập.
+- **Huấn luyện (Training):** Khởi tạo bộ phân lớp SVC (Support Vector Classifier) với cấu hình kernel RBF. Hàm `fit()` được gọi để tiến hành quá trình học thuật toán dựa trên dữ liệu huấn luyện. Kết thúc khối này, một bản báo cáo mức độ chính xác (Accuracy) tổng quan trên tập kiểm thử được in ra.
+
+### Khối 5 (Ô 5): Đánh giá chi tiết bằng Ma trận nhầm lẫn (Confusion Matrix)
+- **Mục đích:** Chỉ số độ chính xác (Accuracy) tổng quan không phản ánh được việc mô hình đang gặp khó khăn ở loại tiền tệ cụ thể nào. Ma trận nhầm lẫn (Confusion Matrix) được sử dụng để giải quyết giới hạn này.
+- **Cơ cấu phân tích:** Trục dọc của ma trận biểu thị nhãn thực tế (True Label) của hình ảnh, trục ngang biểu thị nhãn do mô hình dự đoán (Predicted Label).
+- **Quy tắc phân tích:**
+  - Đường chéo chính của ma trận (từ góc trên cùng bên trái xuống góc dưới cùng bên phải) tập trung số lượng hình ảnh được mô hình dự đoán **chính xác** hoàn toàn.
+  - Các ô nằm ngoài đường chéo chính biểu thị số lượng hình ảnh bị **dự đoán sai** (nhầm lẫn loại tiền này sang loại tiền khác). 
+  - **Phân tích chiều sâu:** Ví dụ, nếu ô giao cắt giữa "Hàn Quốc" (Thực tế) và "Nhật Bản" (Dự đoán) có con số cao bất thường, điều này khẳng định mô hình đang không tìm thấy các đặc điểm khác biệt giữa hai loại tiền tệ này. Phát hiện này là tiền đề cốt lõi để đưa ra các biện pháp nâng cấp hệ thống (thu thập thêm dữ liệu hoặc tinh chỉnh lại tham số lưới HOG).
+
+### Khối 6 (Ô 6): Dự đoán trên dữ liệu thực tế và Tổng kết
+- Mô hình đã được huấn luyện hoàn chỉnh được tái sử dụng để dự đoán lại toàn bộ hình ảnh trong cơ sở dữ liệu.
+- Thay vì chỉ xuất ra kết quả phân loại cuối cùng, hàm `predict_proba()` được gọi để tính toán mức độ tự tin (xác suất phần trăm) của mô hình đối với quyết định đó.
+- Kết quả được minh họa trực quan bằng các biểu đồ cột biểu thị xác suất của 5 quốc gia đi kèm cảnh báo `[OK]` (đúng) hoặc `[WRONG]` (sai). Các thông số tổng quát về độ tin cậy được tính toán ở cuối tiến trình.
