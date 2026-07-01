@@ -1,245 +1,107 @@
-# Phân Loại Tiền Tệ — HOG + SVM
+# 💵 Nhận Diện Tiền Tệ Dành Cho Người Mới Bắt Đầu (Newbie-friendly)
 
-Dự án môn Khoa học Dữ liệu — Nhóm sinh viên năm 3.  
-Mô hình tự động nhận diện tiền tệ của 5 quốc gia từ ảnh chụp, sử dụng **HOG** để trích xuất đặc trưng và **SVM** để phân loại.
+Chào bạn! Đây là hướng dẫn cực kỳ chi tiết và đơn giản cho đồ án **"Phân loại tiền tệ các nước bằng Machine Learning"**. Đồ án này được thiết kế sao cho dù bạn mới học code hay mới tiếp xúc với Khoa học Dữ liệu cũng có thể hiểu và chạy được.
 
----
+Mục tiêu của chúng ta là: **Đưa cho máy tính một bức ảnh tờ tiền, máy tính sẽ đoán được đó là tiền của nước nào.**
 
-## Giới thiệu
-
-Chương trình nhận vào một ảnh tiền tệ và dự đoán thuộc quốc gia nào trong 5 nước:
-
-| Nhãn | Quốc gia |
-|------|----------|
-| Canada | 🇨🇦 Canada |
-| Japan | 🇯🇵 Nhật Bản |
-| Korea | 🇰🇷 Hàn Quốc |
-| USA | 🇺🇸 Hoa Kỳ |
-| Vietnam | 🇻🇳 Việt Nam |
+Chúng ta sẽ phân loại 5 loại tiền:
+- 🇨🇦 Canada
+- 🇯🇵 Nhật Bản (Japan)
+- 🇰🇷 Hàn Quốc (Korea)
+- 🇺🇸 Hoa Kỳ (USA)
+- 🇻🇳 Việt Nam (Vietnam)
 
 ---
 
-## Cấu trúc thư mục
+## 🛠️ Bước 1: Chuẩn bị "đồ nghề" (Cài đặt thư viện)
 
-```
-Group_Project_Data_Science_Task_3_3/
-│
-├── Main_CurrencyClassification.ipynb   # File code chính
-├── currency_feature_dataset.csv        # File dữ liệu
-├── README.md                           # File hướng dẫn này
-│
-└── images/
-    ├── Canada/
-    ├── Japan/
-    ├── Korea/
-    ├── USA/
-    └── Vietnam/
-```
+Để code chạy được, máy tính của bạn cần được "dạy" một số kỹ năng cơ bản (thông qua các thư viện). Bạn hãy làm theo các bước sau:
 
----
-
-## Cài đặt
+1. Mở **Command Prompt (CMD)** hoặc **Terminal**.
+2. Copy và dán dòng lệnh này vào rồi ấn Enter:
 
 ```bash
 pip install scikit-learn scikit-image numpy matplotlib seaborn
 ```
 
----
-
-## Cách chạy
-
-1. Đặt ảnh tiền vào đúng thư mục con trong `images/`.
-2. Mở `Main_CurrencyClassification.ipynb` bằng Jupyter Notebook.
-3. Chạy tuần tự từng cell từ trên xuống dưới (`Shift + Enter`).
+*Giải thích nhanh các "đồ nghề":*
+- `numpy`: Máy tính siêu phàm, chuyên tính toán các con số.
+- `matplotlib` & `seaborn`: Bút dạ màu, chuyên dùng để vẽ biểu đồ cho đẹp.
+- `scikit-image`: Kính lúp, giúp đọc và xử lý hình ảnh.
+- `scikit-learn`: Bộ não AI, chứa các thuật toán học máy (Machine Learning).
 
 ---
 
-## Hướng dẫn code
+## 📂 Bước 2: Bố trí thư mục
 
-Notebook gồm 6 cell chính:
+Bạn cần sắp xếp các file y hệt như cấu trúc dưới đây để code có thể tìm thấy ảnh:
 
-### Cell 1 — Khai báo thư viện
-
-```python
-from skimage.feature import hog
-from sklearn.svm import SVC
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-
-CLASS_NAMES = ['Canada', 'Japan', 'Korea', 'USA', 'Vietnam']
-IMG_SIZE    = (96, 96)
+```text
+Group_Project_Data_Science_Task_3_3/
+│
+├── Main_CurrencyClassification.ipynb   <-- File chứa code chính (bạn sẽ chạy file này)
+├── README.md                           <-- Là file bạn đang đọc đây
+│
+└── images/                             <-- Thư mục chứa toàn bộ ảnh tiền
+    ├── Canada/                         <-- Bạn bỏ ảnh tiền Canada vào đây
+    ├── Japan/                          <-- Bạn bỏ ảnh tiền Nhật Bản vào đây
+    ├── Korea/                          <-- ... tương tự
+    ├── USA/
+    └── Vietnam/
 ```
-
-- Dùng `scikit-image` để xử lý ảnh và trích xuất HOG.
-- Dùng `scikit-learn` cho SVM, chuẩn hóa và đánh giá mô hình.
-- `IMG_SIZE = (96, 96)`: tất cả ảnh được resize về 96×96 pixel để đồng nhất đầu vào.
+*(Nếu chưa có ảnh, bạn hãy tải vài tấm ảnh tiền trên mạng, chia vào đúng các thư mục này nhé)*
 
 ---
 
-### Cell 2 — Đọc ảnh và trích xuất HOG
+## 🚀 Bước 3: Chạy thử chương trình
 
-```python
-def extract_hog_features(img_path, img_size=(96, 96)):
-    img = plt.imread(img_path)
-    img = transform.resize(img, img_size)   # Resize về 96x96
-    gray = color.rgb2gray(img)              # Chuyển sang ảnh xám
-    features = hog(gray,
-                   orientations=9,          # 9 hướng gradient
-                   pixels_per_cell=(8, 8),  # Ô 8x8 pixel
-                   cells_per_block=(2, 2))  # Khối 2x2 ô
-    return features, img
-```
-
-- **Resize**: đưa ảnh về cùng kích thước để HOG cho ra vector cùng độ dài.
-- **Chuyển xám**: HOG chỉ cần ảnh xám (1 kênh), không cần màu.
-- **HOG**: phân tích hướng của các cạnh trong ảnh → tạo ra vector đặc trưng số.
+1. Mở phần mềm **Jupyter Notebook**.
+2. Tìm và mở file có tên `Main_CurrencyClassification.ipynb`.
+3. Trong Jupyter, bạn sẽ thấy code được chia thành từng ô (cell) hình chữ nhật.
+4. Bạn hãy click chuột vào ô đầu tiên, rồi nhấn nút **Run** (hoặc tổ hợp phím `Shift + Enter`).
+5. Cứ thế chạy lần lượt từ ô trên cùng xuống ô dưới cùng. Đừng nhảy cóc nhé!
 
 ---
 
-### Cell 3 — Minh họa HOG
+## 🧠 Giải thích thuật toán (Bằng ví dụ đời thường)
 
-Hiển thị ảnh gốc và ảnh HOG tương ứng của mỗi loại tiền — giúp nhìn thấy trực quan những gì HOG "thấy" trong ảnh (các đường nét, cạnh của tờ tiền).
+Để máy tính nhận ra tờ tiền, chúng ta dùng một "bộ đôi hoàn hảo": **HOG** (để nhìn) và **SVM** (để suy nghĩ).
 
----
+### 1. HOG (Histogram of Oriented Gradients) - "Chuyên gia tìm đường viền"
+Máy tính không nhìn thấy hình ảnh như con người, nó chỉ thấy một ma trận các con số. Làm sao để nó biết tờ 10.000 VNĐ khác tờ 1 USD?
 
-### Cell 4 — Chuẩn hóa và huấn luyện SVM
+**HOG** sinh ra để giải quyết việc này. Bạn cứ tưởng tượng HOG là một người cầm bút chì, đi đồ lại toàn bộ **đường viền, góc cạnh, và hoa văn** của tờ tiền.
+- Nó chia tờ tiền ra thành hàng trăm ô vuông nhỏ li ti.
+- Ở mỗi ô, nó xem xét: "Chỗ này có cái sọc ngang nào không? Có sọc dọc nào không? Sọc chéo thì sao?".
+- Cuối cùng, nó tổng hợp lại thành một danh sách rất dài các con số (gọi là *vector đặc trưng*).
+👉 **Kết quả:** Thay vì nhìn cả tấm ảnh màu mè phức tạp, máy tính giờ chỉ cần nhìn vào danh sách các đường viền đặc trưng do HOG tạo ra.
 
-```python
-# Chuẩn hóa đặc trưng
-scaler  = StandardScaler()
-X_scaled = scaler.fit_transform(X_raw)
+### 2. SVM (Support Vector Machine) - "Kẻ vẽ ranh giới"
+Sau khi HOG đã tạo ra danh sách đặc trưng, chúng ta giao danh sách đó cho **SVM** để học cách phân loại.
 
-# Chia train (80%) / test (20%)
-X_train, X_test, y_train, y_test = train_test_split(
-    X_scaled, y_raw, test_size=0.2, random_state=42, stratify=y_raw
-)
-
-# Huấn luyện SVM
-svm = SVC(kernel='rbf', C=10, gamma='scale', probability=True)
-svm.fit(X_train, y_train)
-```
-
-- **StandardScaler**: chuẩn hóa đặc trưng về cùng thang đo, giúp SVM hoạt động tốt hơn.
-- **train_test_split**: chia 80% ảnh để train, 20% để test; `stratify=y_raw` đảm bảo mỗi lớp được phân chia đều.
-- **SVC(kernel='rbf')**: SVM dùng nhân RBF — phù hợp khi đặc trưng không phân tách tuyến tính.
-- `C=10`: tham số kiểm soát độ chặt của phân lớp; `probability=True` để lấy được xác suất đầu ra.
+Hãy tưởng tượng bạn có một cái bàn. Bạn rải lên đó rất nhiều quả cam (tượng trưng cho tiền VNĐ) và quả chanh (tượng trưng cho tiền USD).
+Nhiệm vụ của **SVM** là: **Kẻ một đường thẳng trên mặt bàn sao cho cam nằm hết một bên, chanh nằm hết một bên.**
+- Khi có một quả mới ném lên bàn (một tờ tiền mới), SVM chỉ cần nhìn xem quả đó rơi vào bên nào của đường thẳng là biết ngay nó là cam hay chanh.
+- Nếu các quả xen kẽ nhau quá phức tạp không thể kẻ đường thẳng, SVM có một tuyệt chiêu (gọi là *Kernel RBF*): Nó "tung" các quả đó lên không trung (tạo không gian 3D), rồi nhét một tấm bìa vào giữa để tách chúng ra!
 
 ---
 
-### Cell 5 — Confusion Matrix
+## 📖 Đọc hiểu Code (Đơn giản hóa)
 
-Hiển thị ma trận nhầm lẫn để thấy rõ mô hình hay nhầm cặp lớp nào với nhau.
+Trong file `Main_CurrencyClassification.ipynb`, code được chia thành 6 bước (6 ô):
 
----
-
-### Cell 6 — Dự đoán từng ảnh và tổng kết
-
-```python
-probs     = svm.predict_proba(features_scaled)[0]  # Xác suất 5 lớp
-pred_idx  = int(np.argmax(probs))                   # Lấy lớp cao nhất
-predicted = CLASS_NAMES[pred_idx]
-```
-
-- Với mỗi ảnh, SVM trả về 5 xác suất (tổng = 1).
-- Lấy lớp có xác suất cao nhất làm kết quả dự đoán.
-- Hiển thị ảnh + biểu đồ cột xác suất, nhãn `[OK]` / `[WRONG]`.
-- Cuối cùng in tổng kết độ chính xác.
+*   **Ô 1: Chuẩn bị đồ nghề.** Chúng ta gọi (import) các thư viện đã cài ở Bước 1 vào để dùng.
+*   **Ô 2: Dùng HOG để "đọc" ảnh.** 
+    *   Chương trình sẽ tự động mở thư mục `images/`, vào từng thư mục con để đọc từng tấm ảnh.
+    *   Mọi tấm ảnh dù to dù nhỏ đều bị ép về chung một kích thước (96x96 pixel).
+    *   Sau đó HOG sẽ biến ảnh thành một dãy số (đặc trưng).
+*   **Ô 3: Chụp X-Quang.** Ô này chỉ dùng để vẽ hình minh họa cho bạn xem HOG thực chất đã "nhìn" thấy những nét vẽ gì trên tờ tiền.
+*   **Ô 4: Dạy SVM học (Huấn luyện).**
+    *   Chia bài: Lấy 80% số ảnh ra để "dạy" cho SVM học cách kẻ ranh giới. Cất 20% ảnh còn lại đi để lát nữa "kiểm tra bài cũ" xem SVM học có giỏi không.
+    *   Lệnh `svm.fit(...)` chính là lúc máy tính đang cặm cụi học bài.
+*   **Ô 5: Chấm điểm (Ma trận nhầm lẫn).** Vẽ ra một bảng (gọi là Confusion Matrix) để xem mô hình SVM đoán trúng bao nhiêu câu, và hay đoán nhầm loại tiền nào với loại tiền nào nhất.
+*   **Ô 6: Biểu diễn thực tế.** Đưa ảnh thật vào, SVM sẽ đoán xem nó giống tiền nước nào nhất (ra được % chắc chắn). In ra kết quả OK (đoán trúng) hoặc WRONG (đoán sai).
 
 ---
 
-## Hướng dẫn thuật toán
-
-### 1. Tổng quan pipeline
-
-```
-[Ảnh đầu vào]
-      │
-      ▼
-[Resize 96×96 → Chuyển xám]
-      │
-      ▼
-[Trích đặc trưng HOG]  →  Vector số (vd: 1764 con số)
-      │
-      ▼
-[Chuẩn hóa StandardScaler]
-      │
-      ├─── 80% ──→ [Huấn luyện SVM]
-      └─── 20% ──→ [Đánh giá SVM]
-                        │
-                        ▼
-               [Kết quả: Canada/Japan/...]
-```
-
----
-
-### 2. HOG là gì?
-
-**HOG (Histogram of Oriented Gradients)** — Biểu đồ hướng gradient.
-
-Ý tưởng đơn giản: **hình dạng và đường nét của tờ tiền khác nhau giữa các quốc gia** → HOG phát hiện các đường nét đó.
-
-**Cách hoạt động (3 bước):**
-
-**Bước 1**: Chia ảnh thành các ô nhỏ 8×8 pixel.
-
-```
-┌────┬────┬────┬────┐
-│ ô  │ ô  │ ô  │ ô  │
-├────┼────┼────┼────┤
-│ ô  │ ô  │ ô  │ ô  │
-└────┴────┴────┴────┘
-     Ảnh 96×96 → 12×12 = 144 ô
-```
-
-**Bước 2**: Trong mỗi ô, tính hướng của các cạnh (gradient) và thống kê vào 9 hướng (0°, 20°, 40°, ..., 160°).
-
-```
-Cạnh ngang → đóng góp vào hướng 0°
-Cạnh chéo  → đóng góp vào hướng 45°
-Cạnh đứng  → đóng góp vào hướng 90°
-```
-
-**Bước 3**: Ghép tất cả các cột histogram lại → **vector đặc trưng** đại diện cho ảnh.
-
-**Kết quả**: Mỗi ảnh 96×96 → vector ~1764 số → SVM dùng vector này để phân loại.
-
----
-
-### 3. SVM là gì?
-
-**SVM (Support Vector Machine)** — Máy vector hỗ trợ.
-
-Ý tưởng: Tìm một **đường ranh giới** phân tách tốt nhất giữa các lớp trong không gian đặc trưng.
-
-```
-Lớp A: ●●●  |  ○○○ :Lớp B
-             |
-         Đường ranh giới (hyperplane)
-         → Khoảng cách tới 2 lớp là lớn nhất
-```
-
-**Kernel RBF**: Khi các lớp không phân tách được bằng đường thẳng, SVM dùng kernel RBF để "chiếu" dữ liệu lên không gian chiều cao hơn, ở đó chúng có thể phân tách được.
-
-**Trong dự án này**:
-- **Đầu vào**: vector HOG ~1764 chiều của mỗi ảnh.
-- **Đầu ra**: 1 trong 5 nhãn (Canada, Japan, Korea, USA, Vietnam) kèm theo xác suất.
-
----
-
-### 4. Tại sao HOG + SVM phù hợp?
-
-| Tiêu chí | HOG + SVM | CNN phức tạp (MobileNetV2) |
-|----------|-----------|--------------------------|
-| Dễ hiểu | ✅ Rất dễ | ❌ Khó |
-| Dataset nhỏ | ✅ Hoạt động tốt | ⚠️ Dễ overfit |
-| Thời gian train | ✅ Vài giây | ⚠️ Vài phút – giờ |
-| Cần GPU | ✅ Không | ⚠️ Nên có |
-| Độ chính xác | ✅ Tốt với ảnh rõ | ✅ Cao hơn nếu nhiều data |
-
-HOG + SVM là lựa chọn **cổ điển và hiệu quả** cho bài toán phân loại ảnh với dataset nhỏ — rất phù hợp cho đồ án sinh viên.
-
----
-
-## Nhóm thực hiện
-
-> *Báo cáo môn Khoa học Dữ liệu — Nhóm sinh viên năm 3*
+Chúc bạn có một đồ án thành công và đạt điểm cao nhé! Đừng ngại thử nghiệm bằng cách bỏ thêm ảnh tiền mới vào thư mục để thử thách mô hình.
